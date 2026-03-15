@@ -1,0 +1,56 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ds-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: ds
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+  redis:
+    image: redis:7
+    container_name: ds-redis
+    ports:
+      - "6379:6379"
+  backend1:
+    build:
+      context: ./backend-springboot
+    container_name: ds-backend-1
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      INSTANCE_NAME: backend-1
+      SERVER_PORT: 8081
+    depends_on:
+      - mysql
+      - redis
+  backend2:
+    build:
+      context: ./backend-springboot
+    container_name: ds-backend-2
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      INSTANCE_NAME: backend-2
+      SERVER_PORT: 8082
+    depends_on:
+      - mysql
+      - redis
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    container_name: ds-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend1
+      - backend2

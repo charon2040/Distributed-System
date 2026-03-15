@@ -54,3 +54,7 @@ application-local.yml
 application-local.properties
 *.pem
 *.key
+
+# Docs (local notes)
+FILE_GUIDE.md
+SYSTEM_DESIGN.md

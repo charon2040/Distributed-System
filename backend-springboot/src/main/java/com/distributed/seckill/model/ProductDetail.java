@@ -2,6 +2,9 @@ package com.distributed.seckill.model;
 
 import java.math.BigDecimal;
 
+/**
+ * 商品详情实体（包含描述与库存）。
+ */
 public class ProductDetail {
   private Long id;
   private String name;

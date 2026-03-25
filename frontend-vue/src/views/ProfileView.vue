@@ -22,8 +22,10 @@
 import { onMounted, ref } from "vue";
 import { session, seckillResult } from "../store/session";
 
+// 个人中心订单列表
 const orders = ref([]);
 
+// 加载当前用户订单
 const loadOrders = async () => {
   if (!session.value.userId) {
     orders.value = [];
@@ -37,5 +39,6 @@ const loadOrders = async () => {
   orders.value = await response.json();
 };
 
+// 页面挂载时拉取订单
 onMounted(loadOrders);
 </script>

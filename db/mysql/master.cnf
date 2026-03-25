@@ -1,0 +1,7 @@
+[mysqld]
+# 主库唯一 ID
+server-id=1
+# 开启 binlog 供从库同步
+log_bin=mysql-bin
+# 行级复制，兼容性更好
+binlog_format=ROW

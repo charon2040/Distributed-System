@@ -1,5 +1,8 @@
 package com.distributed.seckill.dto;
 
+/**
+ * 登录请求参数。
+ */
 public class LoginRequest {
   private String username;
   private String password;

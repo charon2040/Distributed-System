@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
+/**
+ * 秒杀下单接口。
+ */
 public class SeckillController {
   private final SeckillService seckillService;
 
@@ -21,6 +24,7 @@ public class SeckillController {
 
   @PostMapping("/seckill")
   public ResponseEntity<?> seckill(@RequestBody SeckillRequest request) {
+    // 校验请求参数
     if (request == null || request.getUserId() == null || request.getProductId() == null) {
       return ResponseEntity.badRequest().body(Map.of("message", "INVALID_INPUT"));
     }

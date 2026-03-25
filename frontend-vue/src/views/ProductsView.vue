@@ -39,6 +39,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { session, setSeckillResult } from "../store/session";
 
+// 商品页状态
 const router = useRouter();
 const products = ref([]);
 const page = ref(1);
@@ -54,12 +55,14 @@ const pagedProducts = computed(() => {
   return products.value.slice(start, end);
 });
 
+// 当数据量或页大小变化时，自动校正页码
 watch([products, pageSize], () => {
   if (page.value > totalPages.value) {
     page.value = totalPages.value;
   }
 });
 
+// 拉取商品列表
 const loadProducts = async () => {
   const response = await fetch("/api/products");
   if (!response.ok) {
@@ -71,6 +74,7 @@ const loadProducts = async () => {
   page.value = 1;
 };
 
+// 发起秒杀请求，结果写入个人中心
 const handleSeckill = async (productId) => {
   if (!session.value.userId) {
     setSeckillResult("请先登录");
@@ -94,5 +98,6 @@ const handleSeckill = async (productId) => {
   router.push("/profile");
 };
 
+// 首次进入页面加载商品
 onMounted(loadProducts);
 </script>

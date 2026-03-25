@@ -29,6 +29,7 @@ import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { setSession } from "../store/session";
 
+// 登录页状态
 const router = useRouter();
 
 const form = reactive({
@@ -39,6 +40,7 @@ const form = reactive({
 const message = ref("");
 const instanceName = ref("-");
 
+// 调用后端登录接口
 const login = async () => {
   message.value = "";
   const response = await fetch("/api/users/login", {

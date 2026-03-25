@@ -1,0 +1,7 @@
+[mysqld]
+# 从库唯一 ID
+server-id=2
+# 中继日志
+relay_log=relay-bin
+# 只读模式，避免误写
+read_only=ON

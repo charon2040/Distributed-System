@@ -3,14 +3,27 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
-    username: root
-    password: rootpass
+    # 写库连接
+    write:
+      jdbc-url: jdbc:mysql://localhost:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      username: root
+      password: rootpass
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    # 读库连接
+    read:
+      jdbc-url: jdbc:mysql://localhost:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      username: root
+      password: rootpass
+      driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
       host: localhost
       port: 6379
+  # ES 地址
+  elasticsearch:
+    uris: http://localhost:9200
 
 mybatis:
   configuration:
+    # 下划线字段自动映射到驼峰属性
     map-underscore-to-camel-case: true

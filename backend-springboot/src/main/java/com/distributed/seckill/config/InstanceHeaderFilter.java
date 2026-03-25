@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
+/**
+ * 为每个响应写入实例标识，便于负载均衡验证时观察请求落点。
+ */
 public class InstanceHeaderFilter extends OncePerRequestFilter {
   private final String instanceName;
 
@@ -23,6 +26,7 @@ public class InstanceHeaderFilter extends OncePerRequestFilter {
       HttpServletResponse response,
       FilterChain filterChain)
       throws ServletException, IOException {
+    // 在响应头中附带当前后端实例名
     response.setHeader("X-Instance", instanceName);
     filterChain.doFilter(request, response);
   }

@@ -1,5 +1,8 @@
 package com.distributed.seckill.model;
 
+/**
+ * 用户实体对象。
+ */
 public class User {
   private Long id;
   private String username;

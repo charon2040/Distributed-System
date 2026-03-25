@@ -22,6 +22,7 @@
 import { session, clearSession } from "./store/session";
 import { useRouter } from "vue-router";
 
+// 应用顶栏登出动作
 const router = useRouter();
 
 const logout = () => {

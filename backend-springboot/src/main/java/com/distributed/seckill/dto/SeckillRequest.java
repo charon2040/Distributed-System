@@ -1,5 +1,8 @@
 package com.distributed.seckill.dto;
 
+/**
+ * 秒杀下单请求参数。
+ */
 public class SeckillRequest {
   private Long userId;
   private Long productId;

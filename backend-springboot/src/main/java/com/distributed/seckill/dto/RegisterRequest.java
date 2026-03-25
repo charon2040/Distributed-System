@@ -1,5 +1,8 @@
 package com.distributed.seckill.dto;
 
+/**
+ * 注册请求参数。
+ */
 public class RegisterRequest {
   private String username;
   private String password;

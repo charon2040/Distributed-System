@@ -2,6 +2,9 @@ package com.distributed.seckill.model;
 
 import java.time.LocalDateTime;
 
+/**
+ * 订单实体对象。
+ */
 public class Order {
   private Long id;
   private Long userId;

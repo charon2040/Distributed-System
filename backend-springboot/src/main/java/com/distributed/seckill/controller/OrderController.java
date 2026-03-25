@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orders")
+/**
+ * 订单查询接口。
+ */
 public class OrderController {
   private final OrderService orderService;
 
@@ -21,6 +24,7 @@ public class OrderController {
 
   @GetMapping
   public ResponseEntity<?> list(@RequestParam(required = false) Long userId) {
+    // 用户 ID 必填
     if (userId == null) {
       return ResponseEntity.badRequest().body(Map.of("message", "INVALID_USER_ID"));
     }

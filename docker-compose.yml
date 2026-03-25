@@ -1,49 +1,95 @@
 services:
-  mysql:
+  # MySQL 主库：负责写入并输出 binlog
+  mysql-master:
     image: mysql:8.0
-    container_name: ds-mysql
+    container_name: ds-mysql-master
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: ds
     ports:
       - "3307:3306"
     volumes:
+      - ./db/mysql/master.cnf:/etc/mysql/conf.d/master.cnf:ro
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/mysql/init-master.sql:/docker-entrypoint-initdb.d/02-init-master.sql:ro
+  # MySQL 从库：用于只读查询
+  mysql-replica:
+    image: mysql:8.0
+    container_name: ds-mysql-replica
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./db/mysql/replica.cnf:/etc/mysql/conf.d/replica.cnf:ro
+      - ./db/mysql/init-replica.sh:/docker-entrypoint-initdb.d/01-init-replica.sh:ro
+    depends_on:
+      - mysql-master
+  # 缓存服务
   redis:
     image: redis:7
     container_name: ds-redis
     ports:
       - "6379:6379"
+  # 搜索服务（可选功能）
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: ds-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+  # 后端实例 1
   backend1:
     build:
       context: ./backend-springboot
     container_name: ds-backend-1
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpass
+      SPRING_DATASOURCE_WRITE_JDBC_URL: jdbc:mysql://mysql-master:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      SPRING_DATASOURCE_WRITE_USERNAME: root
+      SPRING_DATASOURCE_WRITE_PASSWORD: rootpass
+      SPRING_DATASOURCE_WRITE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_DATASOURCE_READ_JDBC_URL: jdbc:mysql://mysql-replica:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      SPRING_DATASOURCE_READ_USERNAME: root
+      SPRING_DATASOURCE_READ_PASSWORD: rootpass
+      SPRING_DATASOURCE_READ_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
       INSTANCE_NAME: backend-1
       SERVER_PORT: 8081
     depends_on:
-      - mysql
+      - mysql-master
+      - mysql-replica
       - redis
+      - elasticsearch
+  # 后端实例 2
   backend2:
     build:
       context: ./backend-springboot
     container_name: ds-backend-2
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: rootpass
+      SPRING_DATASOURCE_WRITE_JDBC_URL: jdbc:mysql://mysql-master:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      SPRING_DATASOURCE_WRITE_USERNAME: root
+      SPRING_DATASOURCE_WRITE_PASSWORD: rootpass
+      SPRING_DATASOURCE_WRITE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_DATASOURCE_READ_JDBC_URL: jdbc:mysql://mysql-replica:3306/ds?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci
+      SPRING_DATASOURCE_READ_USERNAME: root
+      SPRING_DATASOURCE_READ_PASSWORD: rootpass
+      SPRING_DATASOURCE_READ_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
       INSTANCE_NAME: backend-2
       SERVER_PORT: 8082
     depends_on:
-      - mysql
+      - mysql-master
+      - mysql-replica
       - redis
+      - elasticsearch
+  # Nginx 网关与静态资源服务
   web:
     build:
       context: .

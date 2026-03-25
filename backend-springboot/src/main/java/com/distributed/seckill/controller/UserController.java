@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")
+/**
+ * 用户接口：注册与登录。
+ */
 public class UserController {
   private final UserService userService;
 
@@ -22,6 +25,7 @@ public class UserController {
 
   @PostMapping("/register")
   public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    // 基础参数校验，避免空指针与脏数据
     if (request == null || request.getUsername() == null || request.getPassword() == null) {
       return ResponseEntity.badRequest().body(Map.of("message", "INVALID_INPUT"));
     }
@@ -34,6 +38,7 @@ public class UserController {
 
   @PostMapping("/login")
   public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    // 登录参数校验
     if (request == null || request.getUsername() == null || request.getPassword() == null) {
       return ResponseEntity.badRequest().body(Map.of("message", "INVALID_INPUT"));
     }

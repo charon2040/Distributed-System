@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,11 +25,23 @@ public class OrderController {
 
   @GetMapping
   public ResponseEntity<?> list(@RequestParam(required = false) Long userId) {
-    // 用户 ID 必填
     if (userId == null) {
       return ResponseEntity.badRequest().body(Map.of("message", "INVALID_USER_ID"));
     }
     List<Order> orders = orderService.listByUser(userId);
     return ResponseEntity.ok(orders);
+  }
+
+  @GetMapping("/{orderId}")
+  public ResponseEntity<?> detail(@PathVariable Long orderId) {
+    Order order = orderService.findById(orderId);
+    if (order != null) {
+      return ResponseEntity.ok(order);
+    }
+    String status = orderService.getOrderStatus(orderId);
+    if (status == null) {
+      return ResponseEntity.status(404).body(Map.of("message", "NOT_FOUND"));
+    }
+    return ResponseEntity.ok(Map.of("orderId", orderId, "status", status));
   }
 }

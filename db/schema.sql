@@ -28,16 +28,49 @@ CREATE TABLE inventory (
   CONSTRAINT fk_inventory_product FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 订单表
-CREATE TABLE orders (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+-- 分片订单表：按用户ID分库（逻辑u0/u1），按订单ID分表（0/1）
+CREATE TABLE orders_u0_0 (
+  id BIGINT PRIMARY KEY,
   user_id BIGINT NOT NULL,
   product_id BIGINT NOT NULL,
   status VARCHAR(32) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_orders_user (user_id),
-  CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id),
-  CONSTRAINT fk_orders_product FOREIGN KEY (product_id) REFERENCES products(id)
+  CONSTRAINT fk_orders_u0_0_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_orders_u0_0_product FOREIGN KEY (product_id) REFERENCES products(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE orders_u0_1 (
+  id BIGINT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_orders_user (user_id),
+  CONSTRAINT fk_orders_u0_1_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_orders_u0_1_product FOREIGN KEY (product_id) REFERENCES products(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE orders_u1_0 (
+  id BIGINT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_orders_user (user_id),
+  CONSTRAINT fk_orders_u1_0_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_orders_u1_0_product FOREIGN KEY (product_id) REFERENCES products(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE orders_u1_1 (
+  id BIGINT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_orders_user (user_id),
+  CONSTRAINT fk_orders_u1_1_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_orders_u1_1_product FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 初始化演示用户（demo / pass123）

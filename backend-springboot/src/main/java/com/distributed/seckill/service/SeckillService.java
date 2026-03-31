@@ -1,50 +1,116 @@
 package com.distributed.seckill.service;
 
+import com.distributed.seckill.dto.SeckillOrderMessage;
+import com.distributed.seckill.dto.SeckillSubmitResult;
 import com.distributed.seckill.mapper.InventoryMapper;
-import com.distributed.seckill.mapper.OrderMapper;
-import com.distributed.seckill.model.Order;
+import com.distributed.seckill.util.SnowflakeIdGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
-/**
- * 秒杀业务服务：
- * 1) 扣减库存
- * 2) 创建订单
- * 3) 删除商品详情缓存，保证后续读取一致
- */
 public class SeckillService {
+  private static final String SECKILL_TOPIC = "seckill-order-create";
   private final InventoryMapper inventoryMapper;
-  private final OrderMapper orderMapper;
   private final StringRedisTemplate redisTemplate;
+  private final KafkaTemplate<String, String> kafkaTemplate;
+  private final SnowflakeIdGenerator idGenerator;
+  private final ObjectMapper objectMapper;
 
   public SeckillService(
       InventoryMapper inventoryMapper,
-      OrderMapper orderMapper,
-      StringRedisTemplate redisTemplate) {
+      StringRedisTemplate redisTemplate,
+      KafkaTemplate<String, String> kafkaTemplate,
+      SnowflakeIdGenerator idGenerator,
+      ObjectMapper objectMapper) {
     this.inventoryMapper = inventoryMapper;
-    this.orderMapper = orderMapper;
     this.redisTemplate = redisTemplate;
+    this.kafkaTemplate = kafkaTemplate;
+    this.idGenerator = idGenerator;
+    this.objectMapper = objectMapper;
   }
 
-  @Transactional
-  public Order seckill(Long userId, Long productId) {
-    // 原子扣减：仅在库存大于 0 时更新成功
-    int updated = inventoryMapper.decreaseStock(productId);
-    if (updated == 0) {
-      return null;
+  public SeckillSubmitResult submit(Long userId, Long productId) {
+    String dedupKey = dedupKey(userId, productId);
+    Boolean dedupOk = redisTemplate.opsForValue().setIfAbsent(dedupKey, "1", Duration.ofHours(24));
+    if (!Boolean.TRUE.equals(dedupOk)) {
+      return SeckillSubmitResult.fail("DUPLICATE_ORDER");
     }
 
-    // 创建订单记录
-    Order order = new Order();
-    order.setUserId(userId);
-    order.setProductId(productId);
-    order.setStatus("CREATED");
-    orderMapper.insert(order);
+    String stockKey = stockKey(productId);
+    Integer currentStock = ensureStockKey(productId, stockKey);
+    if (currentStock == null || currentStock <= 0) {
+      redisTemplate.delete(dedupKey);
+      return SeckillSubmitResult.fail("OUT_OF_STOCK");
+    }
 
-    // 清理详情缓存，避免读到旧库存
-    redisTemplate.delete("product:detail:" + productId);
-    return order;
+    Long remain = redisTemplate.opsForValue().decrement(stockKey);
+    if (remain == null || remain < 0) {
+      redisTemplate.opsForValue().increment(stockKey);
+      redisTemplate.delete(dedupKey);
+      return SeckillSubmitResult.fail("OUT_OF_STOCK");
+    }
+
+    long orderId = idGenerator.nextId();
+    redisTemplate.opsForValue().set(orderStatusKey(orderId), "QUEUED", Duration.ofHours(24));
+
+    SeckillOrderMessage message = new SeckillOrderMessage();
+    message.setOrderId(orderId);
+    message.setUserId(userId);
+    message.setProductId(productId);
+    try {
+      kafkaTemplate.send(SECKILL_TOPIC, String.valueOf(orderId), objectMapper.writeValueAsString(message));
+      return SeckillSubmitResult.success(orderId);
+    } catch (JsonProcessingException | RuntimeException ex) {
+      redisTemplate.opsForValue().increment(stockKey);
+      redisTemplate.delete(dedupKey);
+      redisTemplate.opsForValue().set(orderStatusKey(orderId), "FAILED", Duration.ofHours(1));
+      return SeckillSubmitResult.fail("QUEUE_ERROR");
+    }
+  }
+
+  public void markOrderStatus(Long orderId, String status) {
+    redisTemplate.opsForValue().set(orderStatusKey(orderId), status, Duration.ofHours(24));
+  }
+
+  public String getOrderStatus(Long orderId) {
+    return redisTemplate.opsForValue().get(orderStatusKey(orderId));
+  }
+
+  public void rollbackSubmit(Long userId, Long productId, Long orderId) {
+    redisTemplate.opsForValue().increment(stockKey(productId));
+    redisTemplate.delete(dedupKey(userId, productId));
+    markOrderStatus(orderId, "FAILED");
+  }
+
+  private Integer ensureStockKey(Long productId, String stockKey) {
+    String cached = redisTemplate.opsForValue().get(stockKey);
+    if (cached != null) {
+      try {
+        return Integer.parseInt(cached);
+      } catch (NumberFormatException ignored) {
+      }
+    }
+    Integer stock = inventoryMapper.findStockByProductId(productId);
+    if (stock == null) {
+      return null;
+    }
+    redisTemplate.opsForValue().setIfAbsent(stockKey, String.valueOf(stock), Duration.ofHours(6));
+    return stock;
+  }
+
+  private String stockKey(Long productId) {
+    return "seckill:stock:" + productId;
+  }
+
+  private String dedupKey(Long userId, Long productId) {
+    return "seckill:dedup:" + userId + ":" + productId;
+  }
+
+  private String orderStatusKey(Long orderId) {
+    return "seckill:order:status:" + orderId;
   }
 }

@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.InsertProvider;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
+import org.apache.ibatis.annotations.UpdateProvider;
 
 @Mapper
 /**
@@ -27,6 +28,13 @@ public interface OrderMapper {
       @Param("table1") String table1,
       @Param("userId") Long userId,
       @Param("productId") Long productId);
+
+  @UpdateProvider(type = SqlProvider.class, method = "updateStatus")
+  int updateStatus(
+      @Param("table") String table,
+      @Param("id") Long id,
+      @Param("expectedStatus") String expectedStatus,
+      @Param("newStatus") String newStatus);
 
   class SqlProvider {
     public String insert(@Param("table") String table) {
@@ -57,6 +65,12 @@ public interface OrderMapper {
           + "(SELECT COUNT(1) FROM "
           + safeTable(table1)
           + " WHERE user_id = #{userId} AND product_id = #{productId})";
+    }
+
+    public String updateStatus(@Param("table") String table) {
+      return "UPDATE "
+          + safeTable(table)
+          + " SET status = #{newStatus} WHERE id = #{id} AND status = #{expectedStatus}";
     }
 
     private static String safeTable(String table) {

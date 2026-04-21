@@ -1,5 +1,4 @@
-
-package com.distributed.seckill;
+package com.distributed.gateway;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -7,12 +6,8 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-/**
- * Spring Boot 启动入口。
- */
-public class SeckillApplication {
+public class GatewayApplication {
   public static void main(String[] args) {
-    // 启动容器并加载全部 Bean
-    SpringApplication.run(SeckillApplication.class, args);
+    SpringApplication.run(GatewayApplication.class, args);
   }
 }

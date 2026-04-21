@@ -2,6 +2,20 @@ server:
   port: 8080
 
 spring:
+  application:
+    name: seckill-backend
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        namespace: ${NACOS_NAMESPACE:public}
+        group: DEFAULT_GROUP
+        service: seckill-backend
+      config:
+        namespace: ${NACOS_NAMESPACE:public}
+        group: DEFAULT_GROUP
+        file-extension: yaml
+        refresh-enabled: true
   datasource:
     # 写库连接
     write:
@@ -37,3 +51,12 @@ mybatis:
   configuration:
     # 下划线字段自动映射到驼峰属性
     map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh
+
+governance:
+  dynamic-message: "default message (override from nacos config)"

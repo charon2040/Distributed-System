@@ -1,4 +1,14 @@
 services:
+  # Nacos：服务注册发现与配置中心
+  nacos:
+    image: docker.1ms.run/nacos/nacos-server:v2.3.2-slim
+    container_name: ds-nacos
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+    ports:
+      - "8848:8848"
+
   # MySQL 主库：负责写入并输出 binlog
   mysql-master:
     image: mysql:8.0
@@ -83,6 +93,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NACOS_SERVER_ADDR: nacos:8848
       INSTANCE_NAME: backend-1
       SERVER_PORT: 8081
     depends_on:
@@ -95,6 +106,8 @@ services:
       elasticsearch:
         condition: service_healthy
       kafka:
+        condition: service_started
+      nacos:
         condition: service_started
   # 后端实例 2
   backend2:
@@ -114,6 +127,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NACOS_SERVER_ADDR: nacos:8848
       INSTANCE_NAME: backend-2
       SERVER_PORT: 8082
     depends_on:
@@ -127,6 +141,28 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      nacos:
+        condition: service_started
+  # Spring Cloud Gateway：统一服务网关（服务发现 + 限流 + 熔断降级）
+  gateway:
+    build:
+      context: ./gateway-springcloud
+    container_name: ds-gateway
+    environment:
+      NACOS_SERVER_ADDR: nacos:8848
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8088:8080"
+    depends_on:
+      redis:
+        condition: service_started
+      nacos:
+        condition: service_started
+      backend1:
+        condition: service_started
+      backend2:
+        condition: service_started
   # Nginx 网关与静态资源服务
   web:
     build:
@@ -136,5 +172,4 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - backend1
-      - backend2
+      - gateway
